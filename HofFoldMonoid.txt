@@ -1,0 +1,394 @@
+| \*\bHigher-Order Functions -> Folds -> Monoids
+
+
+
+| \rOKC FP Meetup
+
+
+
+| \bElliot Harik
+| \b Oseberg, Inc.
+
+---
+
+| \*\bOverview\s
+
+
+
+- Scala Syntax Primer
+- Higher-Order Functions
+- Folds
+- Associativity
+- Monoids
+- Why Should I Care?
+
+---
+
+| \*\bScala Syntax Primer
+
+
+\BFunction Definition
+
+```
+def isEven(x: Int): Boolean
+```
+--
+
+```
+def isEven(x: Int): Boolean = x % 2 == 0
+```
+--
+
+\BFunctions as Values
+
+```
+val isEvenVal: Int => Boolean
+```
+--
+
+```
+val isEvenVal: Int => Boolean =
+  (x: Int) => { x % 2 == 0 }
+```
+--
+
+```
+val isEvenVal: Int => Boolean =
+  _ % 2 == 0
+```
+---
+
+| \*\bScala Syntax Primer (cont'd)
+
+
+\BTypes, Generics
+
+\r Scala's Type System is \*Complex!
+
+\yJust remember that square brackets indicate a type.
+
+```
+val list: List[Int]
+```
+--
+
+
+< \BCurrying
+
+< \yGoing to avoid currying in this pitch for the sake
+< \y  of simplicity.  Many of the functions shown here
+< \y  are curried in Scala's standard library.
+---
+
+| \*\bScala Syntax Primer (cont'd)
+
+
+< \BPattern Matching
+
+--
+```
+val myTree: Tree[A] = ...
+
+myTree match {
+  case Leaf(a) => ...
+  case Node(leftLeaf, rightLeaf) => ...
+}
+```
+--
+
+```
+val myList: List[A] = ...
+
+myList match {
+  case Nil => ...
+  case head :: tail => /* i.e. Cons(head, tail) */ ...
+}
+```
+---
+
+| \*\bHigher-Order Functions
+
+
+\yA higher-order function is a function that
+\y  does either (or both!):
+
+\y  - Accepts a function as an input
+\y  - Returns a function as a result
+
+---
+
+| \*\bHigher-Order Functions (cont'd)
+
+
+< \BAccepting a Function
+
+
+```
+def map[A, B](f: A => B, as: List[A]): List[B]
+```
+--
+
+```
+def map[A, B](f: A => B, as: List[A]): List[B] = {
+
+  def go(in: List[A], out: List[B]): List[B] = in match {
+    case Nil => out
+    case h :: t => go(t, out :+ f(h))
+  }
+
+  go(as, List[B]())
+}
+
+```
+---
+
+| \*\bHigher-Order Functions (cont'd)
+
+
+< \BReturning a Function
+
+
+```
+def timesN(n: Int): Int => Int
+```
+--
+
+```
+def timesN(n: Int): Int => Int = _ * n
+```
+---
+
+| \*\bHigher-Order Functions (cont'd)
+
+
+< \BAccepting and Returning a Function
+
+
+```
+def compose[A, B, C](
+    f: A => B,
+    g: B => C)
+  : A => C
+```
+--
+
+```
+def compose[A, B, C](
+    f: A => B,
+    g: B => C)
+  : A => C =
+  (a: A) => g(f(a))
+```
+---
+
+| \*\bFolds
+
+
+\yA fold is a higher-order function that transforms a
+\y  collection by applying a binary operator (the
+\y  function passed into the fold as a parameter) to
+\y  all elements of the collection starting with some
+\y  seed, or "zero", value.
+
+
+```
+def fold[A, B](
+    as: List[A],
+    zero: B,
+    op: (A, B) => B): B
+```
+---
+
+| \*\bFolds (cont'd)
+
+```
+def fold[A, B](
+    as: List[A],
+    zero: B,
+    op: (A, B) => B): B = {
+
+  def go(in: List[A], out: B): B = in match {
+    case Nil => out
+    case h :: t => go(t, op(h, out))
+  }
+
+  go(as, zero)
+}
+```
+---
+
+| \*\bFolds (cont'd)
+
+< \BExample, Sum
+
+```
+val op = (x: Int, y: Int) => x + y
+
+val seed = 0
+
+def sum(ints: List[Int]): Int =
+  fold(ints, seed, op)
+
+```
+
+---
+
+| \*\bFolds (cont'd)
+
+< \BExample, Product
+
+```
+val op = (x: Int, y: Int) => x * y
+
+val seed = 1
+
+def product(ints: List[Int]): Int =
+  fold(ints, seed, op)
+```
+
+---
+
+| \*\bFolds (cont'd)
+
+< \BExample, Stack Trace
+
+```
+val op =
+  (x: String, y: String) => s"$y\n\t$x"
+
+val seed = "Stack Trace:"
+
+def stackTrace(lines: List[String]): String =
+  fold(lines, seed, op)
+```
+---
+
+| \*\bFolds (cont'd)
+
+< \BA More Complex Example, List Transformation
+
+```
+type Roaster = String
+type Kilos = Long
+case class Order(
+    name: String,
+    roaster: Roaster,
+    qty: Kilos)
+
+val op = (x: Order, y: Map[Roaster, Kilos]) => {
+  val qty: Kilos =
+    y.getOrElse(x.roaster, 0L) + x.qty
+  y.updated(x.roaster, qty)
+}
+
+val seed: Map[Roaster, Kilos] = Map.empty
+```
+---
+
+| \*\bFolds (cont'd)
+
+
+< \BA More Complex Example (cont'd)
+
+
+```
+def amountSoldByRoaster(orders: List[Order]) =
+  fold(orders, seed, op)
+
+val ledger = List(
+  Order("Yirgacheffe", "Elemental", 42),
+  Order("Kona", "Slingers", 25),
+  Order("Blue Mountain", "Slingers", 100))
+```
+---
+
+| \*\bFolds (cont'd)
+
+\BA Special Case, Reduce
+
+\y If the output of a fold is a superclass of the input
+\y   then we don't need a seed value and can simply
+\y   "reduce" the input based on a binary operator
+
+```
+def reduce[A](as: List[A], op: A => A): A
+```
+--
+
+```
+def reduce[A](as: List[A], op: (A, A) => A): A = {
+
+  def go(in: List[A], out: A): A = in match {
+    case Nil => out
+    case h :: t => go(t, op(h, out))
+  }
+  go(as.tail, as.head)
+}
+```
+---
+
+| \*\bAssociativity
+
+\ySome binary operators used in folds are associative.
+\y  In these cases we can parallelize a fold operation,
+\y  for example:
+
+```
+a0 + a1 + a2 + a3 = (a0 + a1) + (a2 + a3)
+```
+
+--
+\yIn the above example we can execute \w(a0 + a1) \yand
+\w  (a2 + a3)\y on separate processors.  If we have
+\y  lots of processors and an expensive operation this
+\y  can yield significant performance improvements.
+---
+
+
+| \*\bMonoids
+
+\yA monoid is a combination of some type, A, a seed (or
+\y  "zero") for that type, and an associative binary
+\y  operator.  Concretely:
+
+--
+```
+trait Monad[A] {
+  def op(a1: A, a2: A): A
+  def zero: A
+}
+
+// In addition to the associativity of op, for any A
+// the following must hold:
+op(a, zero) == a == op(zero, a)
+```
+---
+
+| \*\bWhy Should You Care?
+
+\yHigher-order functions help create reusable and
+\y  composable operators.  They bring us closer to a
+\y  declarative approach like a la \wmap, fold, filter.
+
+\yFolds are a super useful tool from which many more
+\y  complex operations can be built.
+
+\yMonoids are a useful abstraction that can be observed
+\y  and exploited.  Identifying monoids and being able
+\y  to communicate about them provides a common
+\y  reference point to build upon.
+---
+
+| \*\bCredits
+
+\yMuch of the motivation and information for this
+\y  presentation came from "the red book", i.e.
+\y  \_Functional Programming in Scala\s\y by Chiusano
+\y  and Bjarnason.
+
+\yThe blog series "learning Scalaz" by Eugene Yokota
+\y  was also informative.
+
+---
+
+| \*\bQuestions?
