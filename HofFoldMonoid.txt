@@ -11,7 +11,9 @@
 
 ---
 
+
 | \*\bOverview\s
+
 
 
 
@@ -22,11 +24,14 @@
 - Monoids
 - Why Should I Care?
 
+
+
+
 ---
 
 | \*\bScala Syntax Primer
 
-
+                                                  
 \BFunction Definition
 
 ```
@@ -59,11 +64,11 @@ val isEvenVal: Int => Boolean =
 ---
 
 | \*\bScala Syntax Primer (cont'd)
-
+                                                 
 
 \BTypes, Generics
 
-\r Scala's Type System is \*Complex!
+\rScala's Type System is \*Complex!
 
 \yJust remember that square brackets indicate a type.
 
@@ -81,7 +86,7 @@ val list: List[Int]
 ---
 
 | \*\bScala Syntax Primer (cont'd)
-
+                                                 
 
 < \BPattern Matching
 
@@ -107,6 +112,8 @@ myList match {
 ---
 
 | \*\bHigher-Order Functions
+                                                 
+
 
 
 \yA higher-order function is a function that
@@ -115,10 +122,14 @@ myList match {
 \y  - Accepts a function as an input
 \y  - Returns a function as a result
 
+
+
+
+
 ---
 
 | \*\bHigher-Order Functions (cont'd)
-
+                                                 
 
 < \BAccepting a Function
 
@@ -133,7 +144,7 @@ def map[A, B](f: A => B, as: List[A]): List[B] = {
 
   def go(in: List[A], out: List[B]): List[B] = in match {
     case Nil => out
-    case h :: t => go(t, out :+ f(h))
+    case h :: t => f(h) +: go(t, out)
   }
 
   go(as, List[B]())
@@ -143,6 +154,7 @@ def map[A, B](f: A => B, as: List[A]): List[B] = {
 ---
 
 | \*\bHigher-Order Functions (cont'd)
+                                                 
 
 
 < \BReturning a Function
@@ -156,10 +168,14 @@ def timesN(n: Int): Int => Int
 ```
 def timesN(n: Int): Int => Int = _ * n
 ```
+
+
+
+
 ---
 
 | \*\bHigher-Order Functions (cont'd)
-
+                                                 
 
 < \BAccepting and Returning a Function
 
@@ -180,9 +196,8 @@ def compose[A, B, C](
   (a: A) => g(f(a))
 ```
 ---
-
 | \*\bFolds
-
+                                                 
 
 \yA fold is a higher-order function that transforms a
 \y  collection by applying a binary operator (the
@@ -197,118 +212,117 @@ def fold[A, B](
     zero: B,
     op: (A, B) => B): B
 ```
----
-
-| \*\bFolds (cont'd)
+--
 
 ```
 def fold[A, B](
     as: List[A],
     zero: B,
-    op: (A, B) => B): B = {
-
-  def go(in: List[A], out: B): B = in match {
-    case Nil => out
-    case h :: t => go(t, op(h, out))
-  }
-
-  go(as, zero)
+    op: (A, B) => B): B = as match {
+  case Nil => zero
+  case h :: t => op(h, fold[A, B](t, zero, op))
 }
 ```
 ---
-
 | \*\bFolds (cont'd)
+                                                 
+
 
 < \BExample, Sum
 
-```
-val op = (x: Int, y: Int) => x + y
 
-val seed = 0
+
+```
+
+val sumSeed = 0
+
+val sumOp = (x: Int, y: Int) => x + y
 
 def sum(ints: List[Int]): Int =
-  fold(ints, seed, op)
+  fold(ints, sumSeed, sumOp)
 
 ```
 
 ---
-
 | \*\bFolds (cont'd)
+                                                 
+
+< \BExpanded Sum Example
+
+\wfold(List(17, 5, 13, 7), 0, sumOp)
+--
+\wsumOp(17, fold(List(5, 13, 7), 0, sumOp))
+--
+\wsumOp(17, sumOp(5, fold(List(13, 7), 0, sumOp)))
+--
+\wsumOp(17, sumOp(5, sumOp(13, fold(List(7), 0, sumOp))))
+--
+\wsumOp(17, sumOp(5, sumOp(13, sumOp(7, fold(Nil, 0, sumOp)))))
+--
+\wsumOp(17, sumOp(5, sumOp(13, sumOp(7, O))))
+--
+\wsumOp(17, sumOp(5, sumOp(13, 7 + 0)))
+--
+\wsumOp(17, sumOp(5, sumOp(13, 7)))
+--
+\wsumOp(17, sumOp(5, 13 + 7))
+--
+\wsumOp(17, sumOp(5, 20))
+--
+\wsumOp(17, 5 + 20)
+--
+\wsumOp(17, 25)
+--
+\w17 + 25
+--
+\w42
+```
+---
+| \*\bFolds (cont'd)
+                                                 
+
 
 < \BExample, Product
 
-```
-val op = (x: Int, y: Int) => x * y
 
-val seed = 1
+
+```
+
+val productSeed = 1
+
+val productOp = (x: Int, y: Int) => x * y
 
 def product(ints: List[Int]): Int =
+  fold(ints, productSeed, productOp)
+```
+
+---
+| \*\bFolds (cont'd)
+                                                 
+
+
+< \BExample, Division
+
+
+
+```
+val op = (x: Int, y: Double) => x / y
+
+val seed = 1D
+
+def divide(ints: List[Int]): Double =
   fold(ints, seed, op)
 ```
-
 ---
 
 | \*\bFolds (cont'd)
-
-< \BExample, Stack Trace
-
-```
-val op =
-  (x: String, y: String) => s"$y\n\t$x"
-
-val seed = "Stack Trace:"
-
-def stackTrace(lines: List[String]): String =
-  fold(lines, seed, op)
-```
----
-
-| \*\bFolds (cont'd)
-
-< \BA More Complex Example, List Transformation
-
-```
-type Roaster = String
-type Kilos = Long
-case class Order(
-    name: String,
-    roaster: Roaster,
-    qty: Kilos)
-
-val op = (x: Order, y: Map[Roaster, Kilos]) => {
-  val qty: Kilos =
-    y.getOrElse(x.roaster, 0L) + x.qty
-  y.updated(x.roaster, qty)
-}
-
-val seed: Map[Roaster, Kilos] = Map.empty
-```
----
-
-| \*\bFolds (cont'd)
-
-
-< \BA More Complex Example (cont'd)
-
-
-```
-def amountSoldByRoaster(orders: List[Order]) =
-  fold(orders, seed, op)
-
-val ledger = List(
-  Order("Yirgacheffe", "Elemental", 42),
-  Order("Kona", "Slingers", 25),
-  Order("Blue Mountain", "Slingers", 100))
-```
----
-
-| \*\bFolds (cont'd)
+                                                 
 
 \BA Special Case, Reduce
 
-\y If the output of a fold is a superclass of the input
-\y   then we don't need a seed value and can simply
-\y   "reduce" the input based on a binary operator
+\yIf we know the list is non-empty and the output is 
+\y  the same type as the input then we can simply 
+\y  "reduce" the collection based on a binary operator:
 
 ```
 def reduce[A](as: List[A], op: A => A): A
@@ -322,34 +336,38 @@ def reduce[A](as: List[A], op: (A, A) => A): A = {
     case Nil => out
     case h :: t => go(t, op(h, out))
   }
+
   go(as.tail, as.head)
 }
 ```
 ---
-
 | \*\bAssociativity
 
+
+
+                                                 
 \ySome binary operators used in folds are associative.
 \y  In these cases we can parallelize a fold operation,
 \y  for example:
 
-```
-a0 + a1 + a2 + a3 = (a0 + a1) + (a2 + a3)
-```
+
+| \wa0 + a1 + a2 + a3 = (a0 + a1) + (a2 + a3)
+
 
 --
 \yIn the above example we can execute \w(a0 + a1) \yand
 \w  (a2 + a3)\y on separate processors.  If we have
-\y  lots of processors and an expensive operation this
-\y  can yield significant performance improvements.
+\y  multiple processors and an expensive operation or
+\y  a huge collection this can yield significant 
+\y  performance improvements.
 ---
-
-
 | \*\bMonoids
+                                                 
+                                                 
+\yA monoid is a combination of some type, A, a seed
+\y  (or "zero") for that type, and an associative
+\y   binary operator.  Concretely:
 
-\yA monoid is a combination of some type, A, a seed (or
-\y  "zero") for that type, and an associative binary
-\y  operator.  Concretely:
 
 --
 ```
@@ -357,38 +375,142 @@ trait Monad[A] {
   def op(a1: A, a2: A): A
   def zero: A
 }
+```
+--
 
-// In addition to the associativity of op, for any A
-// the following must hold:
+\yIn addition to the associativity of \wop\y, for 
+\y  any \*\wA \s\ythe following must hold:
+
+```
 op(a, zero) == a == op(zero, a)
 ```
----
+--
 
+\g:heavy_check_mark: integer sum
+\g:heavy_check_mark: integer product
+\r:heavy_multiplication_x: integer division
+---
 | \*\bWhy Should You Care?
+                                                 
+
 
 \yHigher-order functions help create reusable and
 \y  composable operators.  They bring us closer to a
-\y  declarative approach like a la \wmap, fold, filter.
+\y  declarative approach a la \wmap, fold, filter.
+
+--
+
 
 \yFolds are a super useful tool from which many more
-\y  complex operations can be built.
+\y  complex operations can be built.  Any time you 
+\y  you find yourself collapsing a collection via a 
+\y  binary operator see if a \wfold \ywill do the trick!
 
-\yMonoids are a useful abstraction that can be observed
-\y  and exploited.  Identifying monoids and being able
-\y  to communicate about them provides a common
-\y  reference point to build upon.
+---
+| \*\bWhy Should You Care? (cont'd)
+
+
+
+\yMonoids!  Monoids are but one of many algabraic
+\y  structures that can be utilized in functional
+\y  programming.  You may have heard of others like
+\y  functors or monads.
+
+
+\yLike many other tools available to you as a 
+\y  developer, being able to identify monoids (or
+\y  other algabraic structures) gives you further
+\y  insight into how to solve problems and 
+\y  communicate about the problem space with your
+\y  peers.
+
 ---
 
-| \*\bCredits
-
+| \*\bCredits and Additional Info
+                                                 
 \yMuch of the motivation and information for this
 \y  presentation came from "the red book", i.e.
 \y  \_Functional Programming in Scala\s\y by Chiusano
 \y  and Bjarnason.
+https://www.manning.com/books/functional-programming-in-scala
+
 
 \yThe blog series "learning Scalaz" by Eugene Yokota
 \y  was also informative.
+http://eed3si9n.com/learning-scalaz/Monoid.html
+
+
+\yScott Wlaschin's posts are excellent:
+https://fsharpforfunandprofit.com/posts/monoids-without-tears/
 
 ---
 
 | \*\bQuestions?
+
+---
+
+| \*\bFolds
+                                                 
+
+
+
+< \BA More Complex Example, List Transformation
+
+
+```
+type Roaster = String
+
+type Kilos = Long
+
+type Price = Double
+
+case class Order(
+    coffeeName: String,
+    roaster: Roaster,
+    qty: Kilos,
+    price: Price)
+```
+---
+
+```
+val addOrder =
+  (x: Order, y: Map[Roaster, List[Order]]) => {
+    val orders = 
+      y.getOrElse(x.roaster, List.empty) :+ x
+    y.updated(x.roaster, orders)
+  }
+
+val noOrders: Map[Roaster, List[Order]] = Map.empty
+
+def groupByRoaster(orders: List[Order])
+    : Map[Roaster, List[Order]] = 
+  fold(orders, noOrders, addOrder)
+
+```
+---
+
+```
+val addToInvoice =
+  (x: (Roaster, List[Order]), y: Map[Roaster, Price]) => {
+    val orderCost = x._2.map(o => o.qty * o.price)
+    y + ((x._1, orderCost.sum))
+  }
+
+val emptyInvoice: Map[Roaster, Price] = Map.empty
+
+// use std lib fold on Map since ours is for List
+def invoices(orders: List[Order]): Map[Roaster, Price] =
+  groupByRoaster(orders)
+    .foldRight(emptyInvoice)(addToInvoice)
+```
+
+---
+
+```
+val orders = List(
+  Order("Yirgacheffe", "Elemental", 42, 2.0),
+  Order("Kona", "Slingers", 25, 1.5),
+  Order("Blue Mountain", "Slingers", 100, 1.33),
+  Order("Gesha", "Elemental", 5, 10.0))
+```
+---
