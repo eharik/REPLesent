@@ -144,10 +144,10 @@ def map[A, B](f: A => B, as: List[A]): List[B] = {
 
   def go(in: List[A], out: List[B]): List[B] = in match {
     case Nil => out
-    case h :: t => f(h) +: go(t, out)
+    case h :: t => go(t, f(h) +: out)
   }
 
-  go(as, List[B]())
+  go(as, List[B]()).reverse
 }
 
 ```
@@ -371,7 +371,7 @@ def reduce[A](as: List[A], op: (A, A) => A): A = {
 
 --
 ```
-trait Monad[A] {
+trait Monoid[A] {
   def op(a1: A, a2: A): A
   def zero: A
 }
